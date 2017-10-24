@@ -1,4 +1,8 @@
 import React, { Component } from 'react';
+import AppBar from 'material-ui/AppBar';
+import RaisedButton from 'material-ui/RaisedButton';
+import Paper from 'material-ui/Paper';
+import Divider from 'material-ui/Divider';
 import './App.css';
 
 const GAME_STATES = {
@@ -21,62 +25,81 @@ class App extends Component {
   }
 
   render() {
-    const { frames, status } = this.state;
     return (
       <div className="App">
-        <header className="App-header">
-          <h1 className="App-title">Bowling Scores</h1>
-        </header>
-
+        <AppBar
+          showMenuIconButton={false}
+          title="Bowling Scores"
+        />
         { this.renderGame() }
-
       </div>
     );
   }
 
   renderGame() {
-    const { frames, status } = this.state;
+    const { status } = this.state;
     switch (status) {
       case GAME_STATES.START:
         return this.renderGameStart();
       case GAME_STATES.PLAY:
         return (
           <div>
-            { this.renderFrames() }
             { this.renderInputs() }
+            { this.renderFrames() }
           </div>
         );
       case GAME_STATES.END:
         return (
           <div>
+            <RaisedButton onClick={this.restartGame} label="Restart" fullWidth={true} secondary={true} />
             { this.renderFrames() }
-            Game end
-            <button onClick={this.restartGame}>Restart</button>
+            <div>
+              Game End
+            </div>
           </div>
         );
+      default:
+        throw new Error('Unhandled game state')
     }
   }
 
   renderGameStart() {
     return (
-      <div><button onClick={this.startGame}>START</button></div>
+      <RaisedButton onClick={this.startGame} label="Start" fullWidth={true} secondary={true} />
     );
   }
 
   renderFrames() {
-    const { frames } = this.state;
-    return frames.map(frame => this.renderFrame(frame));
+    const { frames, currentFrame, status } = this.state;
+    return frames.map(frame => this.renderFrame(frame, currentFrame === frame.id && status === GAME_STATES.PLAY));
   }
 
-  renderFrame(frame) {
+  renderFrame(frame, isCurrent) {
     const { rolls, score, id } = frame;
     const firstRoll = rolls[0] || 0;
     const secondRoll = frame.strike ? 'X' : frame.spare ? '/' : frame.rolls.length > 1 ? frame.rolls[1] : 0;
+
+    const style = {
+      height: 100,
+      width: 100,
+      margin: 20,
+      textAlign: 'center',
+      display: 'inline-block'
+    };
+
+    if (isCurrent) {
+      style.backgroundColor = 'rgb(255, 248, 220)';
+    }
+
     return (
-      <div key={id} className='bowling-board--frame'>
-          <div> { firstRoll } | { secondRoll } </div>
-          <div> { score } </div>
-      </div>
+      <Paper key={id} style={style} zDepth={2} rounded={false}>
+        <div className='bowling-board--frame-rolls'>
+          <div> { firstRoll } </div>
+          <div> { secondRoll } </div>
+        </div>
+        <Divider />
+        <div className='bowling-board--frame-score'> { score } </div>
+      </Paper>
     );
   }
 
@@ -87,7 +110,9 @@ class App extends Component {
 
     for(let i = 0; i < 11; i ++) {
       const disabled = rolls.length === 1 && score + i > 10;
-      inputs.push(<button key={i} onClick={this.enterRollValue} value={i} disabled={disabled}>{i}</button>);
+      inputs.push((
+        <RaisedButton key={i} onClick={this.enterRollValue} value={i} disabled={disabled} label={i} />
+      ));
     }
     return (<div className='bowling-board--inputs'>
       { inputs }
@@ -134,7 +159,7 @@ class App extends Component {
   enterRollValue(event) {
     const { frames, currentFrame, status } = this.state;
     const frame = frames[currentFrame];
-    const value = parseInt(event.target.value);
+    const value = parseInt(event.currentTarget.value, 10);
     if (status === GAME_STATES.PLAY) {
       this.addRoll(frame, value);
     }
